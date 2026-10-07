@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"os"
+
+	"github.com/zrgo/gecko/internal/cli"
+)
 
 func main() {
-	fmt.Println("gecko")
+	os.Exit(cli.Execute())
 }

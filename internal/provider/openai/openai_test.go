@@ -126,7 +126,7 @@ func TestSuggestErrors(t *testing.T) {
 		contains string
 	}{
 		{"openai error shape", 401, `{"error":{"message":"Incorrect API key provided","type":"invalid_request_error"}}`,
-			"p: API error 401: Incorrect API key provided (check the API key)"},
+			`provider "p": API error 401: Incorrect API key provided (check the API key)`},
 		{"string error shape", 404, `{"error":"model not found"}`, "API error 404: model not found"},
 		{"plain text error", 502, "upstream down", "API error 502: upstream down"},
 		{"empty error body", 500, "", "API error 500: Internal Server Error"},

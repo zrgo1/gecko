@@ -81,7 +81,7 @@ func newClient(cfg provider.Config, base string, jsonMode bool) (*Client, error)
 func (c *Client) Suggest(ctx context.Context, req provider.Request) (provider.Suggestion, error) {
 	content, err := c.complete(ctx, req)
 	if err != nil {
-		return provider.Suggestion{}, fmt.Errorf("%s: %w", c.name, err)
+		return provider.Suggestion{}, fmt.Errorf("provider %q: %w", c.name, err)
 	}
 	return provider.ParseSuggestion(content)
 }
