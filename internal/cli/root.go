@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/zrgo/gecko/internal/config"
+	"github.com/zrgo/gecko/internal/prompt"
 	"github.com/zrgo/gecko/internal/provider"
 	"github.com/zrgo/gecko/internal/provider/openai"
 )
@@ -118,7 +119,8 @@ func run(cmd *cobra.Command, opts *Options, inv Invocation) error {
 		return err
 	}
 
-	req := tempRequest(inv)
+	shell := prompt.ShellPath(resolved.Shell, os.Getenv)
+	req := prompt.Build(prompt.DetectDefault(shell), inv.Hint, inv.Query)
 	if opts.Verbose {
 		fmt.Fprintf(stderr, "gecko: system prompt:\n%s\ngecko: user prompt:\n%s\n", req.System, req.User)
 	}
