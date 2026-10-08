@@ -14,6 +14,7 @@ import (
 	"github.com/zrgo/gecko/internal/prompt"
 	"github.com/zrgo/gecko/internal/provider"
 	"github.com/zrgo/gecko/internal/provider/openai"
+	"github.com/zrgo/gecko/internal/runner"
 )
 
 // version is overridden at build time: -ldflags "-X github.com/zrgo/gecko/internal/cli.version=v0.1.0"
@@ -37,15 +38,13 @@ func Execute() int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	if err := newRootCmd().ExecuteContext(ctx); err != nil {
-		if ctx.Err() != nil {
-			fmt.Fprintln(os.Stderr, "gecko: interrupted")
-			return 130
-		}
+	err := newRootCmd().ExecuteContext(ctx)
+	if ctx.Err() != nil {
+		fmt.Fprintln(os.Stderr, "gecko: interrupted")
+	} else if err != nil {
 		fmt.Fprintln(os.Stderr, "gecko:", err)
-		return 1
 	}
-	return 0
+	return runner.ExitCode(ctx, err)
 }
 
 // newRegistry lists every provider type gecko supports.
@@ -57,6 +56,11 @@ func newRegistry() *provider.Registry {
 }
 
 func newRootCmd() *cobra.Command {
+	return newRootCmdWithRegistry(newRegistry())
+}
+
+// newRootCmdWithRegistry lets integration tests supply an in-process provider.
+func newRootCmdWithRegistry(registry *provider.Registry) *cobra.Command {
 	opts := &Options{}
 
 	cmd := &cobra.Command{
@@ -80,7 +84,7 @@ The optional first word is a tool hint: if it names a program on your PATH
 			if err != nil {
 				return err
 			}
-			return run(cmd, opts, inv)
+			return run(cmd, opts, inv, registry)
 		},
 	}
 
@@ -97,9 +101,8 @@ The optional first word is a tool hint: if it names a program on your PATH
 	return cmd
 }
 
-// run asks the provider for a command and prints it. Execution and the
-// confirm prompt arrive with the executor task.
-func run(cmd *cobra.Command, opts *Options, inv Invocation) error {
+// run asks the provider for a command, then hands it to the confirmation runner.
+func run(cmd *cobra.Command, opts *Options, inv Invocation, registry *provider.Registry) error {
 	resolved, err := loadConfig(cmd, opts)
 	if err != nil {
 		return err
@@ -109,7 +112,7 @@ func run(cmd *cobra.Command, opts *Options, inv Invocation) error {
 		fmt.Fprintf(stderr, "gecko: %s\n", resolved)
 	}
 
-	p, err := newRegistry().New(resolved.Type, provider.Config{
+	p, err := registry.New(resolved.Type, provider.Config{
 		Name:    resolved.ProviderName,
 		Model:   resolved.Model,
 		BaseURL: resolved.BaseURL,
@@ -130,12 +133,8 @@ func run(cmd *cobra.Command, opts *Options, inv Invocation) error {
 		return err
 	}
 
-	out := cmd.OutOrStdout()
-	fmt.Fprintf(out, "command:     %s\n", s.Command)
-	fmt.Fprintf(out, "explanation: %s\n", s.Explanation)
-	fmt.Fprintf(out, "risk:        %s\n", s.Risk)
-	fmt.Fprintln(stderr, "gecko: not executed (executor not wired up yet)")
-	return nil
+	r := runner.New(cmd.InOrStdin(), cmd.OutOrStdout(), stderr)
+	return r.Run(cmd.Context(), s, shell, opts.DryRun, opts.Execute)
 }
 
 func loadConfig(cmd *cobra.Command, opts *Options) (config.Resolved, error) {
