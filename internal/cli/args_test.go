@@ -35,6 +35,10 @@ func TestParseArgs(t *testing.T) {
 		{"path-like first word", []string{"/usr/bin/grep", "x"}, Invocation{"", "/usr/bin/grep x"}, false},
 		{"hint with empty query", []string{"grep", "  "}, Invocation{}, true},
 		{"blank query", []string{"   "}, Invocation{}, true},
+		{"no args", nil, Invocation{}, true},
+		{"relative path is not a hint", []string{"./grep", "x"}, Invocation{"", "./grep x"}, false},
+		{"quoted executable phrase is not a hint", []string{"git status", "briefly"}, Invocation{"", "git status briefly"}, false},
+		{"query whitespace trimmed", []string{"grep", "  matches  "}, Invocation{"grep", "matches"}, false},
 	}
 
 	for _, tt := range tests {

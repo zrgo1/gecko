@@ -94,8 +94,14 @@ func TestResolvePrecedence(t *testing.T) {
 				BaseURL: "https://api.groq.com/openai/v1", APIKey: "gsk", Shell: "/bin/bash"},
 		},
 		{
+			name: "partial flags preserve environment and profile",
+			env:  map[string]string{EnvProvider: "groq", EnvBaseURL: "https://env.invalid", EnvShell: "/env/shell", "GROQ_API_KEY": "gsk"},
+			ov:   Overrides{Model: "flag-model"},
+			want: Resolved{ProviderName: "groq", Type: "openai-compatible", Model: "flag-model", BaseURL: "https://env.invalid", APIKey: "gsk", Shell: "/env/shell"},
+		},
+		{
 			name: "flags beat env",
-			env:  map[string]string{EnvProvider: "groq", EnvModel: "env-model", EnvBaseURL: "http://env"},
+			env:  map[string]string{EnvProvider: "groq", EnvModel: "env-model", EnvBaseURL: "http://env", EnvShell: "/env/shell"},
 			ov:   Overrides{Provider: "local", Model: "flag-model", BaseURL: "http://flag", Shell: "/bin/sh"},
 			want: Resolved{ProviderName: "local", Type: "openai-compatible", Model: "flag-model",
 				BaseURL: "http://flag", Shell: "/bin/sh"},
